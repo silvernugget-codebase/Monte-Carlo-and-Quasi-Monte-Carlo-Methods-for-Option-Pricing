@@ -1,0 +1,247 @@
+---
+title: "Monte Carlo and Quasi-Monte Carlo Integration"
+subtitle: "Pricing Discretely Monitored Arithmetic Asian Call Options in the Black--Scholes Model"
+author: "Bischoy Bert"
+date: today
+date-format: "DD MMMM YYYY"
+
+format:
+  pdf:
+    pdf-engine: pdflatex
+    documentclass: article
+    fontsize: 12pt
+    geometry: margin=1in
+    linestretch: 1
+    number-sections: true
+    toc-depth: 3
+    keep-tex: true
+    cite-method: natbib
+    natbiboptions: numbers,sort,compress
+    colorlinks: true
+    linkcolor: black
+    citecolor: blue
+    urlcolor: blue
+    fig-pos: "H"
+    fig-align: center
+    fig-width: 5.85
+    fig-height: 3.6
+    include-in-header:
+      text: |
+        \usepackage{float}
+        \floatplacement{table}{H}
+        \usepackage{mathtools}
+        \usepackage[section]{placeins}
+        \numberwithin{equation}{section}
+        \usepackage{caption}
+        \captionsetup{skip=4pt, belowskip=0pt, font=small}
+        \setlength{\intextsep}{8pt plus 2pt minus 2pt}
+        \setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+        \setlength{\floatsep}{8pt plus 2pt minus 2pt}
+        \AtBeginDocument{\setlength{\abovedisplayskip}{6pt plus 2pt minus 1pt}\setlength{\belowdisplayskip}{6pt plus 2pt minus 1pt}\setlength{\abovedisplayshortskip}{3pt plus 1pt}\setlength{\belowdisplayshortskip}{3pt plus 1pt}}
+        \AtBeginDocument{\pagenumbering{roman}}
+        \setcounter{tocdepth}{3}
+        \renewcommand*\contentsname{Table of contents}
+tbl-cap-location: bottom
+execute:
+  echo: false
+  message: false
+  warning: false
+  cache: true
+knitr:
+  opts_chunk:
+    autodep: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+#| cache: false
+
+source("R_scripts/functions.R")
+source("R_scripts/analysis.R")
+
+library(qrng)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(tikzDevice)
+options(
+  tikzDocumentDeclaration = "\\documentclass[12pt]{article}",
+  tikzLatexPackages = c(
+    getOption("tikzLatexPackages"),
+    "\\usepackage{lmodern}"
+  )
+)
+```
+
+\newpage
+
+# Results {.unnumbered .unlisted}
+
+```{r}
+#| label: load-results
+#| include: false
+
+results100 <- readRDS("results/results100.rds")
+effdim <- readRDS("results/effdim.rds")
+summ_arith <- summarise_runs(results100, "arithmetic") |> 
+  add_vrf()
+summ_geo <- summarise_runs(results100, "geometric")
+```
+```{r}
+#| label: fig-validation
+#| fig-cap: 'Geometric Asian call at $d = 52$ with the sequential construction. Estimates include 95% confidence bands. Dotted: exact price.'
+#| fig-scap: 'Geometric Asian call option; illustrative validation plot'
+#| dev: tikz
+
+plot_validation(summ_geo, dim = 52, cons = "Sequential")
+```
+
+```{r}
+#| label: tbl-coverage
+#| tbl-cap: 'Share of the confidence intervals for the geometric call that contain the exact price, across all $d$ and both constructions.'
+#| dev: tikz
+
+coverage(summ_geo, by = "method") |> 
+  kbl(
+    format = "latex",
+    digits = 3,
+    booktabs = TRUE,
+    escape = FALSE,
+    col.names = c(
+      "Estimator",
+      "Coverage",
+      "Intervals"
+    )
+  ) |> 
+  kable_styling(font_size = 11, latex_options = "hold_position")
+```
+
+```{r}
+#| label: tbl-prices
+#| tbl-cap: 'Asian call prices from $nM$ evaluations ($n = 2^{16}$, $M = 100$) $\pm$ the half-width 95\% confidence band. MC uses the sequential construction, RQMC the Sobol sequence with the Brownian bridge.'
+#| dev: tikz
+
+price_table(summ_arith) |> 
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    align = "rrrr",
+    col.names = c(
+      "d",
+      "Geometric (exact)",
+      "Arithmetic, MC",
+      "Arithmetic, RQMC"
+    )
+  )|> 
+  kable_styling(font_size = 11, latex_options = "hold_position")
+```
+
+```{r}
+#| label: fig-convergence
+#| fig-cap: 'Standard deviation (RMSE) of a single $n$-point estimate of the arithmetic call at $d=252$. Dashed: slope $- \frac12$ anchored at the MC value at $n = 2^8$.'
+#| fig-scap: 'Log-log-convergence plot for arithmetic call at $d=252$'
+#| dev: tikz
+
+plot_error(summ_arith, dim = 252)
+```
+
+```{r}
+#| label: tbl-rates
+#| tbl-cap: 'Empirical convergence: negative slope of a least-squares fit of $\log \hat{\sigma}_n$ on $\log n$.'
+#| dev: tikz
+
+rates_table(summ_arith) |> 
+  select(- construction) |> 
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    align = "lrrrrr",
+    col.names = c(
+      "",
+      "$d = 1$",
+      "$d = 4$",
+      "$d = 12$",
+      "$d = 52$",
+      "$d = 252$"
+    )
+  ) |> 
+  pack_rows("Sequential", 1, 4) |> 
+  pack_rows("Brownian Bridge", 5,8)|> 
+  kable_styling(font_size = 11, latex_options = "hold_position")
+```
+
+```{r}
+#| label: fig-vrf
+#| fig-cap: "Variance reduction factor of RQMC over MC at $n = 2^{16}$ (log scales). Below the dashed line, RQMC is less efficient than MC."
+#| fig-scap: 'VRFs of RQMC over MC at $n=2^{16}$'
+#| dev: tikz
+
+plot_vrf(summ_arith)
+```
+
+
+```{r}
+#| label: tbl-vrf
+#| tbl-cap: "VRFs at $n=2^{16}$, rounded to two significant digits."
+#| dev: tikz
+
+vrf_table(summ_arith) |> 
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    linesep = "",
+    escape = FALSE,
+    align = "llrrrrr",
+    col.names = c(
+      "Construction",
+      "Point Set",
+      "$d = 1$",
+      "$d = 4$",
+      "$d = 12$",
+      "$d = 52$",
+      "$d = 252$"
+    )
+  ) |> 
+  kable_styling(font_size = 11, latex_options = "hold_position")
+```
+
+```{r}
+#| label: fig-effdim
+#| fig-cap: 'Share of the variance of the arithmetic payoff not explained by the first $s$ coordinates. The dashed line marks  the 1% level that defines the truncation dimension $d_t$.'
+#| fig-scap: 'Truncation dimension and share of unexplained variance'
+#| dev: tikz
+
+
+plot_effective_dim(effdim)
+```
+
+```{r}
+#| label: tbl-effdim
+#| tbl-cap: 'Truncation dimension $d_t$ of the arithmetic payoff.'
+#| dev: tikz
+
+truncation_dim(effdim) |> 
+  pivot_wider(
+    names_from = d,
+    values_from = d_t
+  ) |> 
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    col.names = c(
+      "Construction",
+      "$d = 1$",
+      "$d = 4$",
+      "$d = 12$",
+      "$d = 52$",
+      "$d = 252$"
+    )
+  )|> 
+  kable_styling(font_size = 11, latex_options = "hold_position")
+```
+
