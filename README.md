@@ -1,6 +1,6 @@
 # Monte Carlo and Quasi-Monte Carlo Integration: Pricing Discretely Monitored Arithmetic Asian Call Options in the Black--Scholes Model
 
-This repository contains the codebase for my Bachelor's thesis titled *Monte Carlo and Quasi-Monte Carlo Integration: Pricing Discretely monitored Arithmetic Asian Call Options in the Black--Scholes Model*. It also contains a file that exactly reproduces the numerical experiment ran at the final section of the thesis and the resulting figures and tables.
+This repository contains the codebase for my Bachelor's thesis titled *Monte Carlo and Quasi-Monte Carlo Integration: Pricing Discretely monitored Arithmetic Asian Call Options in the Black-Scholes Model*. It also contains a file that exactly reproduces the numerical experiment ran at the final section of the thesis and the resulting figures and tables.
 
 The thesis itself is **not** yet included and will be added after the grading is done.
 
