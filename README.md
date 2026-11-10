@@ -6,7 +6,7 @@ The research question asks
 
 > *For a discretely monitored arithmetic Asian call on a non-dividend-paying stock in the Black-Scholes model, how does (Randomized) Quasi-Monte Carlo compare with standard Monte Carlo as the dimension of the integral grows and how much of the difference depends on how the Brownian path is constructed (sequential vs. Brownian bridge)?*
 
-The thesis compares the standard Monte Carlo (MC) method with Randomized Quasi-Monte Carlo (RQMC) for pricing an arithmetic Asian call with up to 252 monitoring dates for two types of Brownian path construction: The random walk construction and the Brownian bridge construction. The closed-form solution of the geometric Asian call option served as the validation benchmark to ensure a correct implementation. Using the Brownian bridge construction, RQMC drastically reduces the variance over MC; under the random walk construction, this advantage shrinks sharply as the number of monitoring dates increases.
+The thesis compares the standard Monte Carlo (MC) method with Randomized Quasi-Monte Carlo (RQMC) for pricing an arithmetic Asian call with up to 252 monitoring dates for two types of Brownian path construction: The random walk construction and the Brownian bridge construction. The closed-form solution of the geometric Asian call option served as the validation benchmark to ensure a correct implementation. Using the Brownian bridge construction, RQMC drastically reduces the variance over MC; under the random walk construction, this advantage shrinks quickly as the number of monitoring dates increases.
 
 **Reproducing the results:**
 
